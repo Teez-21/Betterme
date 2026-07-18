@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>
+  // Apply theme instantly (before CSS paints) to avoid a flash of the wrong theme.
+  (function() {
+    try {
+      var saved = localStorage.getItem('betterme-theme');
+      var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+    } catch (e) {}
+  })();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>BetterME</title>
+<meta name="description" content="Hábitos, calendario y finanzas personales en un solo lugar. Offline first.">
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#4F46E5">
+
+<!-- iOS: agregar a pantalla de inicio -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="BetterME">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+<!-- Favicons -->
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
+
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<!-- ============ Splash ============ -->
+<div id="splash-screen">
+  <img src="./icons/logo-full.png" alt="BetterME">
+</div>
+
+<!-- ============ PIN screen ============ -->
+<div id="pin-screen" class="hidden">
+  <img class="logo-mark" src="./icons/icon-192.png" alt="BetterME">
+  <h1>Ingresa tu PIN</h1>
+  <p class="sub">Protege tu información personal</p>
+  <div class="pin-dots" id="pin-dots"></div>
+  <div class="pin-keypad" id="pin-keypad">
+    <button class="pin-key" data-d="1">1</button>
+    <button class="pin-key" data-d="2">2</button>
+    <button class="pin-key" data-d="3">3</button>
+    <button class="pin-key" data-d="4">4</button>
+    <button class="pin-key" data-d="5">5</button>
+    <button class="pin-key" data-d="6">6</button>
+    <button class="pin-key" data-d="7">7</button>
+    <button class="pin-key" data-d="8">8</button>
+    <button class="pin-key" data-d="9">9</button>
+    <button class="pin-key action hidden" id="pin-cancel-btn">Cancelar</button>
+    <button class="pin-key" data-d="0">0</button>
+    <button class="pin-key action" id="pin-backspace">⌫</button>
+  </div>
+</div>
+
+<!-- ============ App shell ============ -->
+<div id="app" class="hidden">
+  <div class="top-safe"></div>
+
+  <!-- ===== Screen: Hábitos ===== -->
+  <div class="screen" id="screen-habits">
+    <div class="page-header">
+      <div class="greeting" id="habits-greeting">Buenos días</div>
+      <div class="date" id="habits-date"></div>
+    </div>
+    <div class="section">
+      <div class="habits-hero">
+        <div class="habits-hero-top">
+          <div>
+            <div class="habits-hero-pct" id="habits-progress-pct">0%</div>
+            <div class="habits-hero-label" id="habits-progress-label">0 / 0 hábitos</div>
+          </div>
+          <div class="habits-hero-ring" id="habits-hero-ring"></div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="habits-progress-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Pendientes</div>
+      <div class="habit-list" id="habits-pending-list"></div>
+    </div>
+
+    <div class="section" id="habits-completed-section">
+      <div class="collapse-header" id="habits-collapse-header" onclick="Habits.toggleCompletedSection()">
+        <div class="section-title" style="margin:0;">Completados (<span id="habits-completed-count">0</span>)</div>
+        <span class="chev">▾</span>
+      </div>
+      <div class="habit-list hidden" id="habits-completed-list" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== Screen: Calendario ===== -->
+  <div class="screen hidden" id="screen-calendar">
+    <div class="month-nav">
+      <h2 id="calendar-month-label">Julio 2026</h2>
+      <div class="month-nav-btns">
+        <button class="today-btn" onclick="Calendar.goToday()">Hoy</button>
+        <button class="icon-btn" onclick="Calendar.changeMonth(-1)">‹</button>
+        <button class="icon-btn" onclick="Calendar.changeMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="weekday-row"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+    <div class="month-grid" id="calendar-month-grid"></div>
+    <div class="filter-row" id="calendar-filters"></div>
+    <div class="section">
+      <div class="section-title" id="calendar-day-title">Hoy</div>
+      <div class="habit-list" id="calendar-day-items"></div>
+    </div>
+  </div>
+
+  <!-- ===== Screen: Finanzas ===== -->
+  <div class="screen hidden" id="screen-finance">
+    <div class="section" style="margin-top:16px;">
+      <div class="balance-card">
+        <div class="lbl">Balance del mes</div>
+        <div class="balance-total" id="fin-balance-total">$0</div>
+        <div class="balance-row"><span id="fin-ingresos">+ $0</span><span id="fin-gastos">- $0</span></div>
+      </div>
+    </div>
+    <div class="section hidden" id="fin-budget-section">
+      <div class="card">
+        <div class="flex-between"><span class="section-title" style="margin:0;">Presupuesto del mes</span><span id="fin-budget-pct" style="font-weight:700;color:var(--indigo);"></span></div>
+        <div class="progress-track" style="margin-top:10px;"><div class="progress-fill" id="fin-budget-fill"></div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="account-scroll" id="fin-accounts-scroll"></div>
+    </div>
+    <div class="section" style="margin-top:0;">
+      <div class="tabbed-toggle" id="fin-tabs">
+        <button class="active" data-tab="movimientos" onclick="Finance.switchTab('movimientos')">Movs.</button>
+        <button data-tab="ahorros" onclick="Finance.switchTab('ahorros')">Ahorros</button>
+        <button data-tab="deseos" onclick="Finance.switchTab('deseos')">Deseos</button>
+        <button data-tab="deudas" onclick="Finance.switchTab('deudas')">Deudas</button>
+        <button data-tab="frecuentes" onclick="Finance.switchTab('frecuentes')">Frec.</button>
+      </div>
+    </div>
+    <div class="section" id="fin-tab-content"></div>
+    <div class="section" style="display:flex;gap:10px;">
+      <button class="btn btn-secondary btn-block" onclick="Finance.openBudgetForm()">Presupuesto mensual</button>
+      <button class="btn btn-secondary btn-block" onclick="Finance.openFrequentForm()">+ Frecuente</button>
+    </div>
+  </div>
+
+  <!-- ===== Screen: Dashboard ===== -->
+  <div class="screen hidden" id="screen-dashboard" style="position:relative;">
+    <button class="export-btn" onclick="Dashboard.exportPDF()" title="Exportar PDF">⭳</button>
+    <div class="page-header">
+      <div class="greeting" id="dash-greeting">Buenos días</div>
+      <div class="date" id="dash-date"></div>
+    </div>
+
+    <div class="section">
+      <div class="dash-summary-card">
+        <div id="dash-summary-rows"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Hábitos</div>
+      <div class="card" id="dash-habits-stats"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Finanzas</div>
+      <div class="card" style="margin-bottom:12px;" id="dash-finance-stats"></div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="section-title" style="margin-top:0;">Gastos por categoría</div>
+        <canvas class="chart-canvas" id="dash-chart-categories" height="220"></canvas>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="section-title" style="margin-top:0;">Balance últimos 6 meses</div>
+        <canvas class="chart-canvas" id="dash-chart-months" height="220"></canvas>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="section-title" style="margin-top:0;">Evolución del ahorro</div>
+        <canvas class="chart-canvas" id="dash-chart-savings" height="220"></canvas>
+      </div>
+      <div class="card" id="dash-hormiga-stats"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Proyectos</div>
+      <div class="card" id="dash-projects-stats"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Calendario GitHub global</div>
+      <div class="card"><div class="gh-calendar" id="dash-gh-global"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="flex-between" style="margin-bottom:10px;">
+        <div class="section-title" style="margin:0;">Comparaciones</div>
+      </div>
+      <div class="tabbed-toggle" id="dash-compare-toggle" style="margin-bottom:12px;">
+        <button class="active" data-range="week" onclick="Dashboard.setCompareRange('week')">Semana</button>
+        <button data-range="month" onclick="Dashboard.setCompareRange('month')">Mes</button>
+        <button data-range="year" onclick="Dashboard.setCompareRange('year')">Año</button>
+      </div>
+      <div id="dash-comparisons"></div>
+    </div>
+  </div>
+
+  <!-- ===== Screen: Configuración ===== -->
+  <div class="screen hidden" id="screen-settings">
+    <div class="page-header">
+      <div class="greeting">Configuración</div>
+    </div>
+    <div class="section">
+      <div class="settings-group">
+        <div class="settings-row" style="cursor:default;">
+          <span class="lbl">Modo oscuro</span>
+          <button class="theme-switch" id="theme-toggle-btn" onclick="Settings.toggleTheme()"><span class="knob"></span></button>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="settings-group">
+        <div class="settings-row" onclick="Pin.startChangeFlow()"><span class="lbl">Cambiar PIN</span><span class="chev">›</span></div>
+        <div class="settings-row" onclick="Settings.openAccountsManager()"><span class="lbl">Gestión de cuentas</span><span class="chev">›</span></div>
+        <div class="settings-row" onclick="Settings.openCategoriesManager()"><span class="lbl">Gestión de categorías</span><span class="chev">›</span></div>
+        <div class="settings-row" onclick="Settings.openFrequentManager()"><span class="lbl">Gastos frecuentes</span><span class="chev">›</span></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Respaldo</div>
+      <div class="settings-group">
+        <div class="settings-row" onclick="Settings.exportData()"><span class="lbl">Exportar datos (JSON)</span><span class="chev">⭳</span></div>
+        <div class="settings-row" onclick="Settings.importData()"><span class="lbl">Importar datos (JSON)</span><span class="chev">⭱</span></div>
+      </div>
+      <input type="file" id="import-file-input" accept="application/json" class="hidden">
+    </div>
+    <div class="section">
+      <div class="section-title">Zona de riesgo</div>
+      <div class="settings-group">
+        <div class="settings-row" onclick="Settings.resetProgress()"><span class="lbl danger">Reiniciar progreso</span><span class="chev">›</span></div>
+        <div class="settings-row" onclick="Settings.clearAllData()"><span class="lbl danger">Eliminar toda la información</span><span class="chev">›</span></div>
+      </div>
+    </div>
+    <div class="section text-center" style="color:var(--gray-soft);font-size:12px;">
+      BetterME · Todos tus datos se almacenan localmente en este dispositivo.
+    </div>
+  </div>
+
+  <!-- ============ Tab bar ============ -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="habits" onclick="App.goTo('habits')">
+      <span class="tab-icon">🏠</span><span>Hábitos</span>
+    </button>
+    <button class="tab-btn" data-tab="calendar" onclick="App.goTo('calendar')">
+      <span class="tab-icon">📅</span><span>Calendario</span>
+    </button>
+    <button class="tab-btn" data-tab="finance" onclick="App.goTo('finance')">
+      <span class="tab-icon">💰</span><span>Finanzas</span>
+    </button>
+    <button class="tab-btn" data-tab="dashboard" onclick="App.goTo('dashboard')">
+      <span class="tab-icon">📈</span><span>Dashboard</span>
+    </button>
+    <button class="tab-btn" data-tab="settings" onclick="App.goTo('settings')">
+      <span class="tab-icon">⚙️</span><span>Ajustes</span>
+    </button>
+  </div>
+
+  <!-- ============ FAB ============ -->
+  <button class="fab" id="fab">+</button>
+</div>
+
+<!-- ============ Sheet (modal) ============ -->
+<div class="sheet-scrim" id="sheet-scrim">
+  <div class="sheet" id="sheet-container"></div>
+</div>
+
+<!-- ============ Toast ============ -->
+<div id="toast"></div>
+
+<!-- ============ Scripts ============ -->
+<script src="./js/db.js"></script>
+<script src="./js/utils.js"></script>
+<script src="./js/charts.js"></script>
+<script src="./js/pin.js"></script>
+<script src="./js/habits.js"></script>
+<script src="./js/calendar.js"></script>
+<script src="./js/finance.js"></script>
+<script src="./js/dashboard.js"></script>
+<script src="./js/settings.js"></script>
+<script src="./js/app.js"></script>
+
+<script>
+  // PIN keypad wiring
+  document.getElementById('pin-keypad').addEventListener('click', (e) => {
+    const btn = e.target.closest('.pin-key');
+    if (!btn) return;
+    if (btn.dataset.d !== undefined) Pin.press(btn.dataset.d);
+  });
+  document.getElementById('pin-backspace').addEventListener('click', () => Pin.backspace());
+  document.getElementById('pin-cancel-btn').addEventListener('click', () => Pin.cancelChange());
+
+  // Import file handler
+  document.getElementById('import-file-input').addEventListener('change', (e) => {
+    Settings.handleImportFile(e.target.files[0]);
+  });
+</script>
+</body>
+</html>
