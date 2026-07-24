@@ -515,21 +515,45 @@ const Finance = {
         </div>
         ${d.estado === 'pendiente' ? `
         <div class="field" style="margin-top:16px;"><label>${kind === 'debt' ? 'Registrar pago' : 'Registrar cobro'}</label><input type="number" id="dd-pago" min="1" max="${pendiente}"></div>
+        <div class="field"><label>${kind === 'debt' ? '¿De qué cuenta salió el dinero?' : '¿A qué cuenta te pagaron?'}</label><select id="dd-cuenta"></select></div>
         <button class="btn btn-primary btn-block" id="dd-add-pago">${kind === 'debt' ? 'Registrar pago' : 'Registrar cobro'}</button>
         ` : `<p style="text-align:center;color:var(--green);font-weight:700;margin-top:16px;">✔ ${kind === 'debt' ? 'Pagada' : 'Cobrada'} completamente</p>`}
         <button class="btn btn-ghost btn-block" style="margin-top:10px;" id="dd-delete">Eliminar registro</button>
       </div>
     `);
     if (d.estado === 'pendiente') {
+      const cuentaSel = wrap.querySelector('#dd-cuenta');
+      this.accounts.forEach(a => cuentaSel.appendChild(Utils.el(`<option value="${a.id}">${Utils.escapeHtml(a.nombre)}</option>`)));
+
       wrap.querySelector('#dd-add-pago').onclick = async () => {
         const val = parseFloat(wrap.querySelector('#dd-pago').value);
         if (!val || val <= 0) { Utils.toast('Ingresa un valor válido'); return; }
+        const cuentaId = cuentaSel.value;
+        if (!cuentaId) { Utils.toast('Elige una cuenta'); return; }
+
+        // Move the money for real: create a linked transaction so account balances stay accurate.
+        const cat = this.categories.find(c => c.nombre === 'Otros' && c.tipo === (kind === 'debt' ? 'gasto' : 'ingreso'))
+                 || this.categories.find(c => c.tipo === (kind === 'debt' ? 'gasto' : 'ingreso'));
+        const tx = {
+          id: DB.uuid(),
+          tipo: kind === 'debt' ? 'gasto' : 'ingreso',
+          valor: val,
+          fecha: Utils.todayISO(),
+          categoria: cat ? cat.id : '',
+          cuenta: cuentaId,
+          descripcion: `${kind === 'debt' ? 'Pago deuda' : 'Cobro'}: ${d.nombre}`
+        };
+        await DB.put('transactions', tx);
+        this.transactions.push(tx);
+
         d.pagos = d.pagos || [];
-        d.pagos.push({ id: DB.uuid(), valor: val, fecha: Utils.todayISO() });
+        d.pagos.push({ id: DB.uuid(), valor: val, fecha: Utils.todayISO(), cuenta: cuentaId, transactionId: tx.id });
         const totalPagado = d.pagos.reduce((s,p) => s + p.valor, 0);
         if (totalPagado >= d.valorInicial) d.estado = kind === 'debt' ? 'pagada' : 'cobrada';
         await DB.put(store, d);
-        Utils.closeSheet(); Utils.toast('Registrado'); this.render();
+        Utils.closeSheet();
+        Utils.toast(kind === 'debt' ? 'Pago registrado y descontado de la cuenta' : 'Cobro registrado y sumado a la cuenta');
+        this.render();
       };
     }
     wrap.querySelector('#dd-delete').onclick = async () => {

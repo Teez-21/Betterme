@@ -3,8 +3,50 @@
 // ============================================
 
 const Settings = {
+  userName: 'Sergio',
+
   async render() {
     await this.initTheme();
+    await this.initName();
+  },
+
+  // ---------- Nombre del usuario ----------
+  async initName() {
+    this.userName = await DB.getSetting('userName', 'Sergio');
+    this.applyName();
+  },
+
+  applyName() {
+    const habitsGreeting = document.getElementById('habits-greeting');
+    if (habitsGreeting) habitsGreeting.textContent = `${Utils.greeting()}, ${this.userName}`;
+    const dashGreeting = document.getElementById('dash-greeting');
+    if (dashGreeting) dashGreeting.textContent = `${Utils.greeting()}, ${this.userName}`;
+  },
+
+  openNameForm() {
+    const wrap = Utils.el(`
+      <div>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Tu nombre</div>
+        <div class="field"><label>¿Cómo quieres que te salude la app?</label><input type="text" id="nf-nombre" maxlength="30"></div>
+        <div class="sheet-actions">
+          <button class="btn btn-ghost" id="nf-cancel">Cancelar</button>
+          <button class="btn btn-primary" id="nf-save">Guardar</button>
+        </div>
+      </div>
+    `);
+    wrap.querySelector('#nf-nombre').value = this.userName;
+    wrap.querySelector('#nf-cancel').onclick = () => Utils.closeSheet();
+    wrap.querySelector('#nf-save').onclick = async () => {
+      const nombre = wrap.querySelector('#nf-nombre').value.trim();
+      if (!nombre) { Utils.toast('El nombre no puede estar vacío'); return; }
+      this.userName = nombre;
+      await DB.setSetting('userName', nombre);
+      this.applyName();
+      Utils.closeSheet();
+      Utils.toast('Nombre actualizado');
+    };
+    Utils.openSheet(wrap);
   },
 
   // ---------- Theme (dark mode) ----------

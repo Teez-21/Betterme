@@ -105,7 +105,7 @@ const Habits = {
   render() {
     const iso = Utils.todayISO();
     document.getElementById('habits-date').textContent = Utils.capitalize(Utils.formatDateLong(iso));
-    document.getElementById('habits-greeting').textContent = `${Utils.greeting()}, Sergio`;
+    document.getElementById('habits-greeting').textContent = `${Utils.greeting()}, ${Settings.userName}`;
 
     const { pct, done, total } = this.pctToday();
     document.getElementById('habits-progress-fill').style.width = pct + '%';

@@ -28,7 +28,13 @@ const Calendar = {
     const result = [];
     this.items.forEach(it => {
       if (it.tipo === 'proyecto') return; // projects shown separately, not as daily items unless within range
-      if (it.repeticion === 'anual') {
+      // Birthdays always recur every year, regardless of what's stored in "repeticion"
+      // (defensive: covers any item saved before this rule was enforced).
+      if (it.tipo === 'cumpleanos') {
+        const d = Utils.isoToDate(it.fecha);
+        const target = Utils.isoToDate(iso);
+        if (d.getMonth() === target.getMonth() && d.getDate() === target.getDate()) result.push(it);
+      } else if (it.repeticion === 'anual') {
         const d = Utils.isoToDate(it.fecha);
         const target = Utils.isoToDate(iso);
         if (d.getMonth() === target.getMonth() && d.getDate() === target.getDate()) result.push(it);

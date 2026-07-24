@@ -20,7 +20,7 @@ const Dashboard = {
   },
 
   renderSummary() {
-    document.getElementById('dash-greeting').textContent = `${Utils.greeting()}, Sergio`;
+    document.getElementById('dash-greeting').textContent = `${Utils.greeting()}, ${Settings.userName}`;
     document.getElementById('dash-date').textContent = Utils.capitalize(Utils.formatDateLong(Utils.todayISO()));
 
     const { pct, done, total } = Habits.pctToday();

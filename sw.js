@@ -3,7 +3,7 @@
 // Cache-first strategy for full offline functionality.
 // ============================================
 
-const CACHE_NAME = 'betterme-cache-v5';
+const CACHE_NAME = 'betterme-cache-v6';
 const CORE_ASSETS = ['./index.html', './js/app.js', './js/db.js', './js/utils.js', './js/icons.js', './js/pin.js', './js/habits.js', './js/calendar.js', './js/finance.js', './js/focus.js', './js/dashboard.js', './js/settings.js', './js/charts.js', './css/style.css'];
 const ASSETS = [
   './',

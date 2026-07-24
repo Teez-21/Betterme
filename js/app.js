@@ -43,6 +43,7 @@ const App = {
     document.getElementById('splash-screen').classList.add('fade-out');
     setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 400);
 
+    await Settings.initName();
     await Habits.init();
     await Calendar.init();
     await Finance.init();
